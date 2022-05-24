@@ -6,6 +6,7 @@ import org.apache.spark.ml.recommendation.ALS.Rating
 import org.apache.spark.mllib.random._
 import org.apache.spark.rdd.{PairRDDFunctions, RDD}
 import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.storage.StorageLevel
 
 object DataGenerator {
 
@@ -67,7 +68,7 @@ object DataGenerator {
     val sc = sql.sparkContext
     val train = RandomRDDs.randomRDD(sc,
       new RatingGenerator(numUsers, numProducts, implicitPrefs),
-      numExamples, numPartitions, seed).cache()
+      numExamples, numPartitions, seed).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val test = RandomRDDs.randomRDD(sc,
       new RatingGenerator(numUsers, numProducts, implicitPrefs),
@@ -76,11 +77,11 @@ object DataGenerator {
     // Now get rid of duplicate ratings and remove non-existant userID's
     // and prodID's from the test set
     val commons: PairRDDFunctions[(Int,Int),Rating[Int]] =
-      new PairRDDFunctions(train.keyBy(rating => (rating.user, rating.item)).cache())
+      new PairRDDFunctions(train.keyBy(rating => (rating.user, rating.item)).persist(StorageLevel.MEMORY_AND_DISK_SER))
 
     val exact = commons.join(test.keyBy(rating => (rating.user, rating.item)))
 
-    val trainPruned = commons.subtractByKey(exact).map(_._2).cache()
+    val trainPruned = commons.subtractByKey(exact).map(_._2).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Now get rid of users that don't exist in the train set
     val trainUsers: RDD[(Int,Rating[Int])] = trainPruned.keyBy(rating => rating.user)

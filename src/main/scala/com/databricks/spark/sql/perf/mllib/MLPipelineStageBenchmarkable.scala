@@ -2,12 +2,11 @@ package com.databricks.spark.sql.perf.mllib
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.NonFatal
-
 import org.apache.spark.ml.{Estimator, Transformer}
 import org.apache.spark.sql._
 import org.apache.spark.{SparkContext, SparkEnv}
-
 import com.databricks.spark.sql.perf._
+import org.apache.spark.storage.StorageLevel
 
 class MLPipelineStageBenchmarkable(
     params: MLParams,
@@ -30,10 +29,10 @@ class MLPipelineStageBenchmarkable(
     logger.info(s"$this beforeBenchmark")
     try {
       testData = test.testDataSet(param)
-      testData.cache()
+      testData.persist(StorageLevel.MEMORY_AND_DISK_SER)
       testDataCount = Some(testData.count())
       trainingData = test.trainingDataSet(param)
-      trainingData.cache()
+      trainingData.persist(StorageLevel.MEMORY_AND_DISK_SER)
       trainingData.count()
     } catch {
       case NonFatal(e) =>
